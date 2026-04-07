@@ -1,0 +1,22 @@
+# Global variables for Kubespray on localhost
+ansible_become: true
+ansible_connection: local
+# Since we are using local connection, we don't need to specify an SSH user.
+# But Kubespray might still use it in some places.
+# ansible_user: root
+
+# NixOS specific: ensure bin_dir is in a writable place if needed,
+# though /usr/local/bin might be problematic.
+# We'll use /usr/local/bin as default and the user may need to handle it.
+# bin_dir: /usr/local/bin
+
+# FluxCD is handled by the flake's script, but we can set some vars here
+# if there was a Kubespray role for it.
+fluxcd_enabled: true
+# (This is just a placeholder, the actual installation is in the flake script)
+
+# Disable some things that are not needed for a single node local setup
+dns_min_replicas: 1
+nodepool_node_labels:
+  node-role.kubernetes.io/control-plane: ""
+  node-role.kubernetes.io/worker: ""

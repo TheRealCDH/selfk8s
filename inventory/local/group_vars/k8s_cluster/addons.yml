@@ -1,0 +1,14 @@
+# Addons configuration for Kubespray
+metallb_enabled: true
+metallb_protocol: "layer2"
+metallb_config:
+  address_pools:
+    primary:
+      ip_range:
+        - 10.0.0.240-10.0.0.250
+      auto_assign: true
+  layer2:
+    - primary
+
+# Helm is needed for some things but Kubespray handles it
+helm_enabled: true
