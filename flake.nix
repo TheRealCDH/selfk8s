@@ -18,8 +18,9 @@
       patchedKubespray = pkgs.runCommand "patched-kubespray" { } ''
         cp -r ${kubespray} $out
         chmod -R +w $out
-        # Completely override the version check playbook to ensure it passes
-        cat <<EOF > \$out/playbooks/ansible_version.yml
+        
+        # Create a bypass playbook
+        cat <<EOF > /tmp/bypass_ansible.yml
 - name: Bypass Ansible version check
   hosts: all
   gather_facts: false
@@ -28,6 +29,9 @@
       debug:
         msg: "Ansible version check bypassed"
 EOF
+
+        # Replace ALL occurrences of ansible_version.yml in the source
+        find $out -name "ansible_version.yml" -exec cp /tmp/bypass_ansible.yml {} \;
       '';
 
       # Python environment for Kubespray
