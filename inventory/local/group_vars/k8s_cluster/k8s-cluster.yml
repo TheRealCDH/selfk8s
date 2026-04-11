@@ -1,5 +1,5 @@
 # Kubernetes cluster configuration
-kube_network_plugin: calico
+kube_network_plugin: cilium
 kube_apiserver_bind_address: 0.0.0.0
 kube_apiserver_port: 6443
 kube_proxy_mode: ipvs
