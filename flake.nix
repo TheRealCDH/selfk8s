@@ -19,8 +19,9 @@
         cp -r ${kubespray} $out
         chmod -R +w $out
         
-        # Create a bypass playbook
-        cat <<EOF > /tmp/bypass_ansible.yml
+        # Create a bypass playbook content
+        # We use a literal string to avoid shell escaping issues in the cat
+        cat <<'EOF' > bypass_ansible.yml
 - name: Bypass Ansible version check
   hosts: all
   gather_facts: false
@@ -31,7 +32,8 @@
 EOF
 
         # Replace ALL occurrences of ansible_version.yml in the source
-        find $out -name "ansible_version.yml" -exec cp /tmp/bypass_ansible.yml {} \;
+        # We use find to be sure we hit it wherever it is (usually in 'roles/kubespray-defaults/tasks' or 'playbooks')
+        find $out -name "ansible_version.yml" -exec cp bypass_ansible.yml {} \;
       '';
 
       # Python environment for Kubespray
