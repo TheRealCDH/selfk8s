@@ -63,6 +63,14 @@ IP.4 = {{ ip }}
 IP.5 = {{ access_ip }}
 EOF
 " \;
+
+        # Force ignore errors on the problematic node registration workaround
+        # This prevents the entire nix-first-boot.service from failing at the very end
+        find $out -name "main.yml" -exec sed -i '/name: Apply workaround to allow all nodes with cert O=system:nodes to register/a \  ignore_errors: true' {} \;
+
+        # Patch the kube Ansible module to default to the correct admin.conf
+        # This is more robust than patching every YAML file call
+        find $out -name "kube.py" -exec sed -i "s/kubeconfig=dict()/kubeconfig=dict(default='\/etc\/kubernetes\/admin.conf')/g" {} \;
       '';
 
       # Python environment for Kubespray
