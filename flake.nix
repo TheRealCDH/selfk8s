@@ -82,9 +82,13 @@ EOF
           mkdir -p inventory
           cp -r ${./inventory}/* inventory/
           chmod -R +w inventory
-          # Remove problematic cloud_provider: undefined
-          find inventory -name "k8s-cluster.yml" -exec sed -i '/cloud_provider: undefined/d' {} \;
+        else
+          echo "Syncing group_vars from flake..."
+          cp -r ${./inventory}/local/group_vars/* inventory/local/group_vars/
+          chmod -R +w inventory/local/group_vars
         fi
+        # Remove problematic cloud_provider: undefined
+        find inventory -name "k8s-cluster.yml" -exec sed -i '/cloud_provider: undefined/d' {} \;
         
         # Detect actual IP for Kubespray validation at RUNTIME
         ACTUAL_IP=$(hostname -I | awk '{print $1}')
