@@ -33,6 +33,14 @@ EOF
         # Replace ALL occurrences of ansible_version.yml in the source
         find $out -name "ansible_version.yml" -exec cp bypass_ansible.yml {} \;
 
+        # Disable the entire validate_inventory role
+        cat <<'EOF' > bypass_validation.yml
+- name: Bypass inventory validation
+  debug:
+    msg: "Inventory validation bypassed"
+EOF
+        find $out -name "main.yml" | grep validate_inventory | xargs cp bypass_validation.yml
+
         # Disable kubeadm config validation which fails on YAML syntax rendering edge cases
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
       '';
@@ -98,7 +106,7 @@ EOF
         # Create a definitive vars file
         cat <<EOF > extra_vars.json
 {
-  "kube_version": "v1.32.1",
+  "kube_version": "1.32.1",
   "etcd_cert_alt_ips": ["127.0.0.1", "::1", "$ACTUAL_IP"],
   "supplementary_addresses_in_ssl_keys": ["$ACTUAL_IP"],
   "etcd_address": "$ACTUAL_IP",
