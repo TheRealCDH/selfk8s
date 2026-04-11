@@ -3,16 +3,16 @@
     "kubespray": {
       "flake": false,
       "locked": {
-        "lastModified": 1769681389,
-        "narHash": "sha256-FcrZty62rdoWyKB+TprmtojQQzS/SgeAmft6HoVdqhc=",
+        "lastModified": 1775545894,
+        "narHash": "sha256-RZESCePAkH4GqbKdfPzWX/D0pknM3sv3sLlPyBMUd20=",
         "owner": "kubernetes-sigs",
         "repo": "kubespray",
-        "rev": "03828c9ffa26fced518cb9ebf7b20cc359412198",
+        "rev": "0e46cf41086c5887eaf8318dcff7228ffb657f0d",
         "type": "github"
       },
       "original": {
         "owner": "kubernetes-sigs",
-        "ref": "release-2.27",
+        "ref": "release-2.30",
         "repo": "kubespray",
         "type": "github"
       }
