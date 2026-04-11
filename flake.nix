@@ -40,8 +40,8 @@ EOF
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
 
         # Force ignore errors on apiserver cert check (often fails if files missing)
-        find $out -name "kubeadm-setup.yml" -exec sed -i '/register: apiserver_sans_ip_check/a \      failed_when: false' {} \;
-        find $out -name "kubeadm-setup.yml" -exec sed -i '/register: apiserver_sans_host_check/a \      failed_when: false' {} \;
+        find $out -name "kubeadm-setup.yml" -exec sed -i 's/cmd: "openssl x509 -noout -in {{ kube_cert_dir }}\/apiserver.crt -checkip {{ item }}"/cmd: "true"/' {} \;
+        find $out -name "kubeadm-setup.yml" -exec sed -i 's/cmd: "openssl x509 -noout -in {{ kube_cert_dir }}\/apiserver.crt -noout -subject | grep -q {{ item }}"/cmd: "true"/' {} \;
 
         # Fix etcd openssl.conf template bug (stuck counter)
         # We replace the alt_names section with a simpler one that works for single-node
