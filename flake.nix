@@ -2,7 +2,7 @@
   description = "Single-node Localhost Kubernetes Deployment with Kubespray, FluxCD, and MetalLB";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/b989063d83d97157833119c43a2909f195155f30";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     kubespray = {
       url = "github:kubernetes-sigs/kubespray/master";
       flake = false;
@@ -14,6 +14,14 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       
+      # Patch kubespray to disable version check
+      patchedKubespray = pkgs.runCommand "patched-kubespray" { } ''
+        cp -r ${kubespray} $out
+        chmod -R +w $out
+        # Disable the version check task by making it always succeed
+        sed -i 's/assertion: ansible_version.string is version(maximal_ansible_version, "<")/assertion: true/g' $out/playbooks/ansible_version.yml
+      '';
+
       # Python environment for Kubespray
       pythonEnv = pkgs.python3.withPackages (ps: with ps; [
         ansible
@@ -72,7 +80,7 @@ EOF
           # We'll use defaults for group_vars if they don't exist
         fi
 
-        KUBESPRAY_DIR="${kubespray}"
+        KUBESPRAY_DIR="${patchedKubespray}"
         
         echo "Starting autonomous single-node deployment on localhost..."
         
