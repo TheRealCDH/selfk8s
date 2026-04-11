@@ -69,15 +69,14 @@ EOF
         echo "Detected IP: $ACTUAL_IP"
 
         # Always update/create hosts.yaml to ensure correct IP
-        # We use 'ssh' connection to the actual IP to force Kubespray to treat this as a 
-        # proper network node, ensuring certificates are generated with the correct IP SANs.
+        # We use 'ssh' connection to 127.0.0.1 but with the real IP as the primary IP.
+        # We rename the host to node1 to avoid localhost special-casing.
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     node1:
-      ansible_connection: ssh
-      ansible_host: $ACTUAL_IP
-      ansible_user: root
+      ansible_connection: local
+      ansible_host: localhost
       ip: $ACTUAL_IP
       access_ip: $ACTUAL_IP
   children:
@@ -96,20 +95,27 @@ all:
         kube_node:
 EOF
 
-        # Inject cert SANs into ALL all.yml files found
-        find inventory -name "all.yml" -exec sh -c "echo 'supplementary_addresses_in_ssl_keys: [ \"$ACTUAL_IP\" ]' >> {}" \;
-        find inventory -name "all.yml" -exec sh -c "echo 'etcd_cert_alt_ips: [ \"127.0.0.1\", \"::1\", \"$ACTUAL_IP\" ]' >> {}" \;
+        # Create a definitive vars file to override anything Kubespray calculates
+        cat <<EOF > extra_vars.json
+{
+  "etcd_cert_alt_ips": ["127.0.0.1", "::1", "$ACTUAL_IP"],
+  "supplementary_addresses_in_ssl_keys": ["$ACTUAL_IP"],
+  "etcd_listen_client_urls": "https://$ACTUAL_IP:2379,https://127.0.0.1:2379",
+  "etcd_advertise_client_urls": "https://$ACTUAL_IP:2379",
+  "etcd_address": "$ACTUAL_IP",
+  "ansible_all_ipv4_addresses": ["$ACTUAL_IP"],
+  "ansible_all_ipv6_addresses": ["::1"],
+  "etcd_kubeadm_enabled": false
+}
+EOF
 
-        # Ensure SSH access to the node for root
+        # Ensure SSH access to localhost for root (just in case we switch back)
         mkdir -p ~/.ssh
         if [ ! -f ~/.ssh/id_rsa ]; then
           ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
         fi
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
         chmod 600 ~/.ssh/authorized_keys
-        # Add the actual IP to known_hosts to avoid prompt
-        ssh-keyscan -H "$ACTUAL_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
-        # Also add 127.0.0.1 just in case
         ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts 2>/dev/null || true
 
         KUBESPRAY_DIR="${patchedKubespray}"
@@ -122,15 +128,16 @@ EOF
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
         
         # Run ansible-playbook locally as root
-        # We pass etcd_cert_alt_ips again as extra-vars to be absolutely sure
+        # Using -e @extra_vars.json to ensure lists are parsed correctly
         sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
-          -e "etcd_cert_alt_ips=['127.0.0.1','::1','$ACTUAL_IP']" \
+          -e "@$PROJECT_DIR/extra_vars.json" \
           -b \
           "$@"
+
 
 
         echo "Cluster deployed! Configuring kubectl..."
