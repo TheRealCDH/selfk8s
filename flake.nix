@@ -115,14 +115,14 @@ EOF
         # We point to the cluster.yml in the kubespray source
         # Pass configuration via environment and extra vars
         # We also pass extra cert alt names to handle the host IP correctly
-        # Use supplementary_addresses_in_ssl_keys for general k8s and etcd certs
-        sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
+        # Use a more explicit way to pass lists to ensure Ansible parses them correctly
+        sudo -E env ACTIP="$ACTUAL_IP" ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
           -e "ansible_connection=local" \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
-          -e "supplementary_addresses_in_ssl_keys=['$ACTUAL_IP']" \
+          -e "{'supplementary_addresses_in_ssl_keys': ['$ACTUAL_IP'], 'etcd_cert_alt_ips': ['127.0.0.1', '::1', '$ACTUAL_IP']}" \
           -b \
           "$@"
 
