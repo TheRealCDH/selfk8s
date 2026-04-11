@@ -40,9 +40,9 @@ EOF
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
 
         # Disable buggy Calico tasks (Ansible 2.18+ compatibility)
-        # We delete the tasks that use the combine filter which fails on typed data
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico | Process FelixConfiguration/,/recursive=True/d' {} \;
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico | Merge calico network pool/,/recursive=True/d' {} \;
+        # We delete ALL tasks that use the combine filter in the Calico role
+        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico |.*Configuration/,/recursive=True/d' {} \;
+        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico | Merge calico.*pool/,/recursive=True/d' {} \;
 
         # Force ignore errors on apiserver cert check (often fails if files missing)
         find $out -name "kubeadm-setup.yml" -exec sed -i 's/cmd: "openssl x509 -noout -in {{ kube_cert_dir }}\/apiserver.crt -checkip {{ item }}"/cmd: "true"/' {} \;
