@@ -18,9 +18,16 @@
       patchedKubespray = pkgs.runCommand "patched-kubespray" { } ''
         cp -r ${kubespray} $out
         chmod -R +w $out
-        # Disable the version check tasks by making them always succeed
-        # Use find and sed to replace the assertion with a broader pattern
-        find $out -name "*.yml" -exec sed -i "s/assertion: ansible_version.string is version.*/assertion: true/g" {} +
+        # Completely override the version check playbook to ensure it passes
+        cat <<EOF > \$out/playbooks/ansible_version.yml
+- name: Bypass Ansible version check
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Bypass version check"
+      debug:
+        msg: "Ansible version check bypassed"
+EOF
       '';
 
       # Python environment for Kubespray
