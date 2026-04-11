@@ -39,7 +39,7 @@ EOF
   debug:
     msg: "Inventory validation bypassed"
 EOF
-        find $out -name "main.yml" | grep validate_inventory | xargs cp bypass_validation.yml
+        find $out -path "*/roles/validate_inventory/tasks/main.yml" -exec cp bypass_validation.yml {} \;
 
         # Disable kubeadm config validation which fails on YAML syntax rendering edge cases
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
