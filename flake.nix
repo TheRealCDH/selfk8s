@@ -67,13 +67,15 @@ EOF
           echo "Inventory not found in current directory. Creating a default single-node inventory..."
           mkdir -p inventory/local/group_vars/all
           mkdir -p inventory/local/group_vars/k8s_cluster
-          
-          # Detect actual IP for Kubespray validation at RUNTIME
-          ACTUAL_IP=$(ip -4 addr show $(ip route get 1.1.1.1 | grep -oP 'dev \K\S+') | grep -oP 'inet \K[\d.]+' | head -n1)
-          ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
-          echo "Detected IP: $ACTUAL_IP"
+        fi
+        
+        # Detect actual IP for Kubespray validation at RUNTIME
+        ACTUAL_IP=$(ip -4 addr show $(ip route get 1.1.1.1 | grep -oP 'dev \K\S+') | grep -oP 'inet \K[\d.]+' | head -n1)
+        ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
+        echo "Detected IP: $ACTUAL_IP"
 
-          cat <<EOF > inventory/local/hosts.yaml
+        # Always update/create hosts.yaml to ensure correct IP
+        cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     localhost:
@@ -96,8 +98,6 @@ all:
         kube_control_plane:
         kube_node:
 EOF
-          # We'll use defaults for group_vars if they don't exist
-        fi
 
         KUBESPRAY_DIR="${patchedKubespray}"
         
