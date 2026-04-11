@@ -52,25 +52,16 @@ EOF
 
       deploy-script = pkgs.writeShellScriptBin "selfk8s-deploy" ''
         set -e
-        # Use PROJECT_DIR if we are in the repo, otherwise we might be running from nix store
-        # but Kubespray needs the inventory files.
-        # If running via 'nix run github:...', pwd is where the user ran it.
-        # We should probably copy the inventory to a writable temp dir if we want it to be fully autonomous
-        # or assume the user has cloned it. 
-        # But 'nix run' usually implies we want it to work without cloning.
-        
-        # Let's try to find where the project files are. 
-        # If we are in the store, we need to copy them out to use them.
-        
         PROJECT_DIR=$(pwd)
+        
         if [ ! -d "$PROJECT_DIR/inventory" ]; then
-          echo "Inventory not found in current directory. Creating a default single-node inventory..."
-          mkdir -p inventory/local/group_vars/all
-          mkdir -p inventory/local/group_vars/k8s_cluster
+          echo "Copying default inventory from flake..."
+          mkdir -p inventory
+          cp -r ${./inventory}/* inventory/
+          chmod -R +w inventory
         fi
         
         # Detect actual IP for Kubespray validation at RUNTIME
-        # Use a more robust way to get the primary IP
         ACTUAL_IP=$(hostname -I | awk '{print $1}')
         ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
         echo "Detected IP: $ACTUAL_IP"
@@ -78,7 +69,6 @@ EOF
         # Always update/create hosts.yaml to ensure correct IP
         # We use 'ssh' connection to 127.0.0.1 to force Kubespray to treat this as a 
         # proper network node, ensuring certificates are generated with the correct IP SANs.
-        # We assume root can SSH to localhost (common on Ubuntu servers).
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
@@ -104,36 +94,33 @@ all:
         kube_node:
 EOF
 
+        # Inject cert SANs into ALL all.yml files found
+        find inventory -name "all.yml" -exec sh -c "echo 'supplementary_addresses_in_ssl_keys: [ \"$ACTUAL_IP\" ]' >> {}" \;
+        find inventory -name "all.yml" -exec sh -c "echo 'etcd_cert_alt_ips: [ \"127.0.0.1\", \"::1\", \"$ACTUAL_IP\" ]' >> {}" \;
+
         # Ensure SSH access to localhost for root
+        mkdir -p ~/.ssh
         if [ ! -f ~/.ssh/id_rsa ]; then
           ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
         fi
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
         chmod 600 ~/.ssh/authorized_keys
-
-        # Inject cert SANs into all.yml at runtime
-        # We find all files named all.yml in the current directory tree to be sure
-        find . -name "all.yml" -exec sh -c "echo 'supplementary_addresses_in_ssl_keys: [ \"$ACTUAL_IP\" ]' >> {}" \;
-        find . -name "all.yml" -exec sh -c "echo 'etcd_cert_alt_ips: [ \"127.0.0.1\", \"::1\", \"$ACTUAL_IP\" ]' >> {}" \;
+        # Add localhost to known_hosts to avoid prompt
+        ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts 2>/dev/null || true
 
         KUBESPRAY_DIR="${patchedKubespray}"
         
         echo "Starting autonomous single-node deployment on localhost..."
         
         export ANSIBLE_HOST_KEY_CHECKING=False
-        # Allow broken conditionals for Ansible 2.18+ compatibility with older playbooks
         export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True
-        # IMPORTANT: Fix the roles path so Ansible can find 'dynamic_groups' and other roles
         export ANSIBLE_ROLES_PATH="$KUBESPRAY_DIR/roles"
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
         
         # Run ansible-playbook locally as root
-        # We point to the cluster.yml in the kubespray source
-        # Pass configuration via environment and extra vars
         sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
-          -e "ansible_connection=local" \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
           -b \
