@@ -101,10 +101,9 @@ all:
 EOF
 
         # Inject cert SANs into all.yml at runtime
-        cat <<EOF >> inventory/local/group_vars/all/all.yml
-supplementary_addresses_in_ssl_keys: [ "$ACTUAL_IP" ]
-etcd_cert_alt_ips: [ "127.0.0.1", "::1", "$ACTUAL_IP" ]
-EOF
+        # We find all files named all.yml in the current directory tree to be sure
+        find . -name "all.yml" -exec sh -c "echo 'supplementary_addresses_in_ssl_keys: [ \"$ACTUAL_IP\" ]' >> {}" \;
+        find . -name "all.yml" -exec sh -c "echo 'etcd_cert_alt_ips: [ \"127.0.0.1\", \"::1\", \"$ACTUAL_IP\" ]' >> {}" \;
 
         KUBESPRAY_DIR="${patchedKubespray}"
         
