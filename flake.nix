@@ -2,7 +2,7 @@
   description = "Single-node Localhost Kubernetes Deployment with Kubespray, FluxCD, and MetalLB";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/b989063d83d97157833119c43a2909f195155f30";
     kubespray = {
       url = "github:kubernetes-sigs/kubespray/master";
       flake = false;
@@ -89,7 +89,6 @@ EOF
           -e "ansible_connection=local" \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
-          -e "ansible_version_check=false" \
           -b \
           "$@"
 
