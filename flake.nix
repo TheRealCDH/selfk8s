@@ -107,7 +107,8 @@ EOF
         
         # Run ansible-playbook locally as root
         # We point to the cluster.yml in the kubespray source
-        sudo -E ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
+        # Pass configuration via environment and extra vars
+        sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
           -e "ansible_connection=local" \
