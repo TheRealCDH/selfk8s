@@ -99,6 +99,8 @@ EOF
         echo "Starting autonomous single-node deployment on localhost..."
         
         export ANSIBLE_HOST_KEY_CHECKING=False
+        # Allow broken conditionals for Ansible 2.18+ compatibility with older playbooks
+        export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True
         # IMPORTANT: Fix the roles path so Ansible can find 'dynamic_groups' and other roles
         export ANSIBLE_ROLES_PATH="$KUBESPRAY_DIR/roles"
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
