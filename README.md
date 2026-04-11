@@ -17,12 +17,6 @@ To deploy the cluster on **localhost**:
 nix run .
 ```
 
-To deploy the cluster on a **remote Ubuntu server**:
-
-```bash
-TARGET_IP=192.168.1.100 ANSIBLE_CONNECTION=ssh ANSIBLE_USER=ubuntu nix run .
-```
-
 To use kubectl after deployment:
 
 ```bash
