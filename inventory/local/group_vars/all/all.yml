@@ -1,6 +1,6 @@
-# Global variables for Kubespray on localhost
+# Global variables for Kubespray
 ansible_become: true
-ansible_connection: local
+# ansible_connection is set in inventory or via command line
 # Since we are using local connection, we don't need to specify an SSH user.
 # But Kubespray might still use it in some places.
 # ansible_user: root
