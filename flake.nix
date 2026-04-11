@@ -164,6 +164,9 @@ EOF
         export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True
         export ANSIBLE_ROLES_PATH="$KUBESPRAY_DIR/roles"
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
+        # Force HOME and XDG_CACHE_HOME for tools like Cilium/Helm that need a cache directory
+        export HOME=/root
+        export XDG_CACHE_HOME=/root/.cache
         
         # Run ansible-playbook locally as root
         sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
