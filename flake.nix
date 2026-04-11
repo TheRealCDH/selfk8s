@@ -127,7 +127,8 @@ EOF
   "etcd_kubeadm_enabled": false,
   "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"],
   "kube_apiserver_bind_address": "0.0.0.0",
-  "loadbalancer_apiserver_port": 6444
+  "loadbalancer_apiserver_port": 6444,
+  "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443"
 }
 EOF
 
