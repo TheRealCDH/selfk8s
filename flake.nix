@@ -76,26 +76,26 @@ EOF
         echo "Detected IP: $ACTUAL_IP"
 
         # Always update/create hosts.yaml to ensure correct IP
+        # We rename the host from 'localhost' to 'node1' to prevent Kubespray 
+        # from defaulting certs to '::1' while using local connection.
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
-    localhost:
+    node1:
       ansible_connection: local
       ansible_host: 127.0.0.1
       ip: $ACTUAL_IP
       access_ip: $ACTUAL_IP
-      supplementary_addresses_in_ssl_keys: [ "$ACTUAL_IP" ]
-      etcd_cert_alt_ips: [ "127.0.0.1", "::1", "$ACTUAL_IP" ]
   children:
     kube_control_plane:
       hosts:
-        localhost:
+        node1:
     kube_node:
       hosts:
-        localhost:
+        node1:
     etcd:
       hosts:
-        localhost:
+        node1:
     k8s_cluster:
       children:
         kube_control_plane:
@@ -121,9 +121,7 @@ EOF
         # Run ansible-playbook locally as root
         # We point to the cluster.yml in the kubespray source
         # Pass configuration via environment and extra vars
-        # We also pass extra cert alt names to handle the host IP correctly
-        # Use a more explicit way to pass lists to ensure Ansible parses them correctly
-        sudo -E env ACTIP="$ACTUAL_IP" ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
+        sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
           -e "ansible_connection=local" \
@@ -131,6 +129,7 @@ EOF
           -e "credentials_dir=$PROJECT_DIR/credentials" \
           -b \
           "$@"
+
 
         echo "Cluster deployed! Configuring kubectl..."
         mkdir -p ~/.kube
