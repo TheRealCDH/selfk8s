@@ -121,7 +121,8 @@ EOF
   "supplementary_addresses_in_ssl_keys": ["$ACTUAL_IP"],
   "etcd_address": "$ACTUAL_IP",
   "etcd_kubeadm_enabled": false,
-  "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"]
+  "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"],
+  "kube_apiserver_bind_address": "$ACTUAL_IP"
 }
 EOF
 
