@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     kubespray = {
-      url = "github:kubernetes-sigs/kubespray/master";
+      url = "github:kubernetes-sigs/kubespray/release-2.27";
       flake = false;
     };
   };
@@ -83,8 +83,7 @@ EOF
         echo "Detected IP: $ACTUAL_IP"
 
         # Always update/create hosts.yaml to ensure correct IP
-        # We use 'ssh' connection to 127.0.0.1 but with the real IP as the primary IP.
-        # We rename the host to node1 to avoid localhost special-casing.
+        # We use 'local' connection but rename the host to node1.
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
@@ -109,32 +108,20 @@ all:
         kube_node:
 EOF
 
-        # Create a definitive vars file to override anything Kubespray calculates
+        # Create a definitive vars file
         cat <<EOF > extra_vars.json
 {
+  "kube_version": "v1.31.1",
   "etcd_cert_alt_ips": ["127.0.0.1", "::1", "$ACTUAL_IP"],
   "supplementary_addresses_in_ssl_keys": ["$ACTUAL_IP"],
-  "etcd_listen_client_urls": "https://$ACTUAL_IP:2379,https://127.0.0.1:2379",
-  "etcd_advertise_client_urls": "https://$ACTUAL_IP:2379",
   "etcd_address": "$ACTUAL_IP",
-  "ansible_all_ipv4_addresses": ["$ACTUAL_IP"],
-  "ansible_all_ipv6_addresses": ["::1"],
   "etcd_kubeadm_enabled": false
 }
 EOF
 
-        # Ensure SSH access to localhost for root (just in case we switch back)
-        mkdir -p ~/.ssh
-        if [ ! -f ~/.ssh/id_rsa ]; then
-          ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
-        fi
-        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        chmod 600 ~/.ssh/authorized_keys
-        ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts 2>/dev/null || true
-
         KUBESPRAY_DIR="${patchedKubespray}"
         
-        echo "Starting autonomous single-node deployment on node1 ($ACTUAL_IP)..."
+        echo "Starting autonomous single-node deployment on node1 ($ACTUAL_IP) with K8s v1.31.1..."
         
         export ANSIBLE_HOST_KEY_CHECKING=False
         export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True
@@ -142,7 +129,6 @@ EOF
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
         
         # Run ansible-playbook locally as root
-        # Using -e @extra_vars.json to ensure lists are parsed correctly
         sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
@@ -151,6 +137,7 @@ EOF
           -e "@$PROJECT_DIR/extra_vars.json" \
           -b \
           "$@"
+
 
 
 
