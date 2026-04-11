@@ -122,7 +122,8 @@ EOF
   "etcd_address": "$ACTUAL_IP",
   "etcd_kubeadm_enabled": false,
   "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"],
-  "kube_apiserver_bind_address": "$ACTUAL_IP"
+  "kube_apiserver_bind_address": "0.0.0.0",
+  "nginx_kube_apiserver_port": 6444
 }
 EOF
 
