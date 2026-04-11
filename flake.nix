@@ -167,6 +167,26 @@ EOF
         echo "Installing FluxCD..."
         flux install
 
+        echo "Configuring FluxCD to sync with https://github.com/TheRealCDH/fluxrepo..."
+        # Create GitSource pointing to the user's repo
+        if ! flux get source git fluxrepo -n flux-system > /dev/null 2>&1; then
+          flux create source git fluxrepo \
+            --url=https://github.com/TheRealCDH/fluxrepo \
+            --branch=main \
+            --interval=1m \
+            --namespace=flux-system
+        fi
+
+        # Create Kustomization to sync the repo content
+        if ! flux get kustomization fluxrepo -n flux-system > /dev/null 2>&1; then
+          flux create kustomization fluxrepo \
+            --source=GitRepository/fluxrepo \
+            --path="./" \
+            --prune=true \
+            --interval=1m \
+            --namespace=flux-system
+        fi
+
         echo "Deployment complete!"
       '';
 
