@@ -89,6 +89,7 @@ EOF
           -e "ansible_connection=local" \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
+          -e "ansible_version_check=false" \
           -b \
           "$@"
 
