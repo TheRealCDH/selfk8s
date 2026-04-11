@@ -39,9 +39,10 @@ EOF
         # Disable kubeadm config validation which fails on YAML syntax rendering edge cases
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
 
-        # Disable buggy Calico FelixConfiguration task (Ansible 2.18+ compatibility)
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico | Process FelixConfiguration/,/recursive=True/ s/^.*set_fact:.*$/      debug:\n        msg: bypassed/' {} \;
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/name: Calico | Process FelixConfiguration/,/recursive=True/ s/^.*_felix_config:.*$/      # removed/' {} \;
+        # Disable buggy Calico tasks (Ansible 2.18+ compatibility)
+        # We replace set_fact with debug for tasks using the combine filter which fails on typed data
+        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/set_fact:/,/recursive=True/ s/^.*set_fact:.*$/      debug:\n        msg: bypassed/' {} \;
+        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i '/recursive=True/ s/^.*_.*:.*$/      # removed/' {} \;
 
         # Force ignore errors on apiserver cert check (often fails if files missing)
         find $out -name "kubeadm-setup.yml" -exec sed -i 's/cmd: "openssl x509 -noout -in {{ kube_cert_dir }}\/apiserver.crt -checkip {{ item }}"/cmd: "true"/' {} \;
