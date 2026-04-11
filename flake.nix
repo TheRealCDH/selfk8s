@@ -76,14 +76,16 @@ EOF
         echo "Detected IP: $ACTUAL_IP"
 
         # Always update/create hosts.yaml to ensure correct IP
-        # We rename the host from 'localhost' to 'node1' to prevent Kubespray 
-        # from defaulting certs to '::1' while using local connection.
+        # We use 'ssh' connection to 127.0.0.1 to force Kubespray to treat this as a 
+        # proper network node, ensuring certificates are generated with the correct IP SANs.
+        # We assume root can SSH to localhost (common on Ubuntu servers).
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     node1:
-      ansible_connection: local
+      ansible_connection: ssh
       ansible_host: 127.0.0.1
+      ansible_user: root
       ip: $ACTUAL_IP
       access_ip: $ACTUAL_IP
   children:
@@ -101,6 +103,13 @@ all:
         kube_control_plane:
         kube_node:
 EOF
+
+        # Ensure SSH access to localhost for root
+        if [ ! -f ~/.ssh/id_rsa ]; then
+          ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+        fi
+        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+        chmod 600 ~/.ssh/authorized_keys
 
         # Inject cert SANs into all.yml at runtime
         # We find all files named all.yml in the current directory tree to be sure
