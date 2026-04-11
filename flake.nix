@@ -38,6 +38,21 @@ EOF
 
         # Disable kubeadm config validation which fails on YAML syntax rendering edge cases
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
+
+        # Fix etcd openssl.conf template bug (stuck counter)
+        # We replace the alt_names section with a simpler one that works for single-node
+        find $out -name "openssl.conf.j2" -exec sh -c "sed -i '/\[alt_names\]/,\$d' {} && cat >> {} <<'EOF'
+[alt_names]
+DNS.1 = localhost
+DNS.2 = node1
+DNS.3 = etcd
+IP.1 = 127.0.0.1
+IP.2 = ::1
+IP.3 = {{ etcd_address }}
+IP.4 = {{ ip }}
+IP.5 = {{ access_ip }}
+EOF
+" \;
       '';
 
       # Python environment for Kubespray
