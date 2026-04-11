@@ -68,14 +68,18 @@ EOF
           mkdir -p inventory/local/group_vars/all
           mkdir -p inventory/local/group_vars/k8s_cluster
           
+          # Detect actual IP for Kubespray validation
+          ACTUAL_IP=$(ip -4 addr show $(ip route get 1.1.1.1 | grep -oP 'dev \K\S+') | grep -oP 'inet \K[\d.]+' | head -n1)
+          ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
+
           cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     localhost:
       ansible_connection: local
       ansible_host: 127.0.0.1
-      ip: 127.0.0.1
-      access_ip: 127.0.0.1
+      ip: $ACTUAL_IP
+      access_ip: $ACTUAL_IP
   children:
     kube_control_plane:
       hosts:
