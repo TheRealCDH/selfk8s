@@ -168,28 +168,22 @@ EOF
         flux install
 
         echo "Configuring FluxCD to sync with https://github.com/TheRealCDH/fluxrepo..."
-        # Create GitSource pointing to the user's repo
-        # We rename it to flux-system to match the references in the repo's manifests
-        # We add --ignore-paths to respect the user's .fluxignore patterns at the source level
-        if ! flux get source git flux-system -n flux-system > /dev/null 2>&1; then
-          flux create source git flux-system \
-            --url=https://github.com/TheRealCDH/fluxrepo \
-            --branch=main \
-            --interval=1m \
-            --ignore-paths="**/charts/,**/templates/,**/Chart.yaml,**/values.yaml" \
-            --namespace=flux-system
-        fi
+        # Force creation of GitSource and Kustomization to ensure they are applied
+        flux create source git flux-system \
+          --url=https://github.com/TheRealCDH/fluxrepo \
+          --branch=main \
+          --interval=1m \
+          --ignore-paths="**/charts/,**/templates/,**/Chart.yaml,**/values.yaml" \
+          --namespace=flux-system \
+          || flux patch source git flux-system --url=https://github.com/TheRealCDH/fluxrepo --branch=main --namespace=flux-system
 
-        # Create Kustomization to sync the repo content
-        # We point to clusters/my-cluster which seems to be the entry point
-        if ! flux get kustomization fluxrepo -n flux-system > /dev/null 2>&1; then
-          flux create kustomization fluxrepo \
-            --source=GitRepository/flux-system \
-            --path="./clusters/my-cluster" \
-            --prune=true \
-            --interval=1m \
-            --namespace=flux-system
-        fi
+        flux create kustomization fluxrepo \
+          --source=GitRepository/flux-system \
+          --path="./clusters/my-cluster" \
+          --prune=true \
+          --interval=1m \
+          --namespace=flux-system \
+          || flux patch kustomization fluxrepo --path="./clusters/my-cluster" --namespace=flux-system
 
         echo "Deployment complete!"
       '';
