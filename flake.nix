@@ -59,6 +59,8 @@ EOF
           mkdir -p inventory
           cp -r ${./inventory}/* inventory/
           chmod -R +w inventory
+          # Remove problematic cloud_provider: undefined
+          find inventory -name "k8s-cluster.yml" -exec sed -i '/cloud_provider: undefined/d' {} \;
         fi
         
         # Detect actual IP for Kubespray validation at RUNTIME
