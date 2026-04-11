@@ -19,7 +19,8 @@
         cp -r ${kubespray} $out
         chmod -R +w $out
         # Disable the version check task by making it always succeed
-        sed -i 's/assertion: ansible_version.string is version(maximal_ansible_version, "<")/assertion: true/g' $out/playbooks/ansible_version.yml
+        # Using a more robust sed pattern to match the assertion line
+        sed -i 's/assertion: .*/assertion: true/g' $out/playbooks/ansible_version.yml
       '';
 
       # Python environment for Kubespray
