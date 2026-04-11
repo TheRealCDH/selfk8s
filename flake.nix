@@ -68,9 +68,10 @@ EOF
           mkdir -p inventory/local/group_vars/all
           mkdir -p inventory/local/group_vars/k8s_cluster
           
-          # Detect actual IP for Kubespray validation
+          # Detect actual IP for Kubespray validation at RUNTIME
           ACTUAL_IP=$(ip -4 addr show $(ip route get 1.1.1.1 | grep -oP 'dev \K\S+') | grep -oP 'inet \K[\d.]+' | head -n1)
           ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
+          echo "Detected IP: $ACTUAL_IP"
 
           cat <<EOF > inventory/local/hosts.yaml
 all:
