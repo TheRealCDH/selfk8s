@@ -46,6 +46,9 @@ EOF
         # Fix kube module calls to use explicit kubeconfig
         find $out -name "*.yml" -exec sed -i 's/\([ ]*\)kubectl: "{{ bin_dir }}\/kubectl"/\1kubectl: "{{ bin_dir }}\/kubectl"\n\1kubeconfig: "{{ kube_config_dir }}\/admin.conf"/g' {} \;
 
+        # Fix deadlock in single-node wait for ready
+        find $out -name "kubeadm-secondary.yml" -exec sed -i 's/when: kubeadm_already_run.stat.exists/when: kubeadm_already_run.stat.exists and groups["kube_control_plane"] | length > 1/g' {} \;
+
         # Fix etcd openssl.conf template bug (stuck counter)
         # We replace the alt_names section with a simpler one that works for single-node
         find $out -name "openssl.conf.j2" -exec sh -c "sed -i '/\[alt_names\]/,\$d' {} && cat >> {} <<'EOF'
