@@ -128,7 +128,8 @@ EOF
   "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"],
   "kube_apiserver_bind_address": "0.0.0.0",
   "loadbalancer_apiserver_port": 6444,
-  "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443"
+  "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443",
+  "kube_proxy_strict_arp": true
 }
 EOF
 
