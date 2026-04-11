@@ -34,7 +34,7 @@ EOF
         find $out -name "ansible_version.yml" -exec cp bypass_ansible.yml {} \;
 
         # Disable the entire validate_inventory role
-        find $out -path "*/roles/validate_inventory/tasks/main.yml" -exec sh -c 'echo "- debug: msg: bypassed" > {}' \;
+        find $out -path "*/roles/validate_inventory/tasks/main.yml" -exec sh -c "echo '- debug: { msg: bypassed }' > {}" \;
 
         # Disable kubeadm config validation which fails on YAML syntax rendering edge cases
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
