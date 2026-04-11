@@ -14,13 +14,12 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       
-      # Patch kubespray to disable version check
+      # Patch kubespray to disable version check and fix etcd cert template bug
       patchedKubespray = pkgs.runCommand "patched-kubespray" { } ''
         cp -r ${kubespray} $out
         chmod -R +w $out
         
         # Create a bypass playbook content
-        # We use a literal string to avoid shell escaping issues in the cat
         cat <<'EOF' > bypass_ansible.yml
 - name: Bypass Ansible version check
   hosts: all
@@ -32,8 +31,23 @@
 EOF
 
         # Replace ALL occurrences of ansible_version.yml in the source
-        # We use find to be sure we hit it wherever it is (usually in 'roles/kubespray-defaults/tasks' or 'playbooks')
         find $out -name "ansible_version.yml" -exec cp bypass_ansible.yml {} \;
+
+        # Fix etcd openssl.conf template bug (stuck counter)
+        # We replace the alt_names section with a simpler one that works for single-node
+        find $out -name "openssl.conf.j2" -exec sed -i '/\[alt_names\]/,$d' {} \;
+        cat <<'EOF' >> $(find $out -name "openssl.conf.j2")
+[alt_names]
+DNS.1 = localhost
+DNS.2 = node1
+DNS.3 = etcd
+IP.1 = 127.0.0.1
+IP.2 = ::1
+IP.3 = {{ etcd_address }}
+{% for ip in etcd_cert_alt_ips %}
+IP.{{ loop.index + 10 }} = {{ ip }}
+{% endfor %}
+EOF
       '';
 
       # Python environment for Kubespray
