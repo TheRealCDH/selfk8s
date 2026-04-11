@@ -15,8 +15,5 @@ kube_control_plane_count: 1
 kube_node_count: 1
 etcd_count: 1
 
-# Disable checking if we are on the same node
-# No, let's just make it work.
 # Some other useful settings
-cloud_provider: undefined
 bin_dir: /usr/local/bin

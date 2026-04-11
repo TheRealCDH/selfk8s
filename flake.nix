@@ -95,6 +95,11 @@ EOF
         ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
         echo "Detected IP: $ACTUAL_IP"
 
+        # Pre-fix permissions for CNI binaries (Cilium requirement)
+        sudo mkdir -p /opt/cni/bin
+        sudo chown root:root /opt/cni/bin
+        sudo chmod 755 /opt/cni/bin
+
         # Always update/create hosts.yaml to ensure correct IP
         # We use 'local' connection but rename the host to node1.
         cat <<EOF > inventory/local/hosts.yaml
@@ -164,16 +169,23 @@ EOF
         sudo cp /etc/kubernetes/admin.conf ~/.kube/config
         sudo chown $(id -u):$(id -g) ~/.kube/config
 
-        echo "Installing FluxCD..."
-        flux install
+        echo "Wait for nodes to be Ready..."
+        kubectl wait --for=condition=Ready node/node1 --timeout=300s || true
+
+        echo "Fixing Cilium operator replicas for single-node cluster..."
+        kubectl scale deployment -n kube-system cilium-operator --replicas=1 || true
+
+        echo "Installing FluxCD with Helm support..."
+        # Flux install includes helm-controller by default, but we ensure components are ready
+        flux install --components-extra=image-reflector-controller,image-automation-controller
 
         echo "Configuring FluxCD to sync with https://github.com/TheRealCDH/fluxrepo..."
         # Force creation of GitSource and Kustomization to ensure they are applied
+        # We REMOVE the ignore-paths for the source so Helm charts are included in the artifact
         flux create source git flux-system \
           --url=https://github.com/TheRealCDH/fluxrepo \
           --branch=main \
           --interval=1m \
-          --ignore-paths="**/charts/,**/templates/,**/Chart.yaml,**/values.yaml" \
           --namespace=flux-system \
           || flux patch source git flux-system --url=https://github.com/TheRealCDH/fluxrepo --branch=main --namespace=flux-system
 
