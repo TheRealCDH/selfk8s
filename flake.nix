@@ -40,10 +40,22 @@ EOF
         find $out -name "kubeadm-setup.yml" -exec sed -i '/validate:.*kubeadm config validate/d' {} \;
 
         # Disable buggy Calico tasks (Ansible 2.18+ compatibility)
-        # We replace the failing set_fact with a safe debug to preserve YAML structure
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i 's/set_fact:/debug:/g' {} \;
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i 's/.*_.*_config:.*{{.*combine.*}}/        msg: bypassed/g' {} \;
-        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec sed -i 's/.*_calico_pool:.*{{.*combine.*}}/        msg: bypassed/g' {} \;
+        # We use python to safely replace the failing set_fact/combine tasks with debug
+        find $out -path "*/roles/network_plugin/calico/tasks/install.yml" -exec ${pkgs.python3}/bin/python3 -c '
+import sys, re
+path = sys.argv[1]
+with open(path, "r") as f:
+    lines = f.readlines()
+with open(path, "w") as f:
+    for line in lines:
+        if "set_fact:" in line:
+            f.write(line.replace("set_fact:", "debug:"))
+        elif "combine(" in line:
+            indent = line[:len(line) - len(line.lstrip())]
+            f.write(f"{indent}msg: bypassed\n")
+        else:
+            f.write(line)
+' {} \;
 
         # Force ignore errors on apiserver cert check (often fails if files missing)
         find $out -name "kubeadm-setup.yml" -exec sed -i 's/cmd: "openssl x509 -noout -in {{ kube_cert_dir }}\/apiserver.crt -checkip {{ item }}"/cmd: "true"/' {} \;
