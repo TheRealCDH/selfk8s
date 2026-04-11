@@ -100,6 +100,12 @@ all:
         kube_node:
 EOF
 
+        # Inject cert SANs into all.yml at runtime
+        cat <<EOF >> inventory/local/group_vars/all/all.yml
+supplementary_addresses_in_ssl_keys: [ "$ACTUAL_IP" ]
+etcd_cert_alt_ips: [ "127.0.0.1", "::1", "$ACTUAL_IP" ]
+EOF
+
         KUBESPRAY_DIR="${patchedKubespray}"
         
         echo "Starting autonomous single-node deployment on localhost..."
@@ -122,7 +128,6 @@ EOF
           -e "ansible_connection=local" \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
-          -e "{'supplementary_addresses_in_ssl_keys': ['$ACTUAL_IP'], 'etcd_cert_alt_ips': ['127.0.0.1', '::1', '$ACTUAL_IP']}" \
           -b \
           "$@"
 
