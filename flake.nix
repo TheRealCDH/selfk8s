@@ -69,14 +69,14 @@ EOF
         echo "Detected IP: $ACTUAL_IP"
 
         # Always update/create hosts.yaml to ensure correct IP
-        # We use 'ssh' connection to 127.0.0.1 to force Kubespray to treat this as a 
+        # We use 'ssh' connection to the actual IP to force Kubespray to treat this as a 
         # proper network node, ensuring certificates are generated with the correct IP SANs.
         cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     node1:
       ansible_connection: ssh
-      ansible_host: 127.0.0.1
+      ansible_host: $ACTUAL_IP
       ansible_user: root
       ip: $ACTUAL_IP
       access_ip: $ACTUAL_IP
@@ -100,19 +100,21 @@ EOF
         find inventory -name "all.yml" -exec sh -c "echo 'supplementary_addresses_in_ssl_keys: [ \"$ACTUAL_IP\" ]' >> {}" \;
         find inventory -name "all.yml" -exec sh -c "echo 'etcd_cert_alt_ips: [ \"127.0.0.1\", \"::1\", \"$ACTUAL_IP\" ]' >> {}" \;
 
-        # Ensure SSH access to localhost for root
+        # Ensure SSH access to the node for root
         mkdir -p ~/.ssh
         if [ ! -f ~/.ssh/id_rsa ]; then
           ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
         fi
         cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
         chmod 600 ~/.ssh/authorized_keys
-        # Add localhost to known_hosts to avoid prompt
+        # Add the actual IP to known_hosts to avoid prompt
+        ssh-keyscan -H "$ACTUAL_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+        # Also add 127.0.0.1 just in case
         ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts 2>/dev/null || true
 
         KUBESPRAY_DIR="${patchedKubespray}"
         
-        echo "Starting autonomous single-node deployment on localhost..."
+        echo "Starting autonomous single-node deployment on node1 ($ACTUAL_IP)..."
         
         export ANSIBLE_HOST_KEY_CHECKING=False
         export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True
@@ -120,11 +122,13 @@ EOF
         export PATH="${pkgs.kubectl}/bin:${pkgs.fluxcd}/bin:${pkgs.kubernetes-helm}/bin:$PATH"
         
         # Run ansible-playbook locally as root
+        # We pass etcd_cert_alt_ips again as extra-vars to be absolutely sure
         sudo -E env ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True ${pythonEnv}/bin/ansible-playbook -i "$PROJECT_DIR/inventory/local/hosts.yaml" \
           "$KUBESPRAY_DIR/cluster.yml" \
           -e ansible_python_interpreter=${pythonEnv}/bin/python \
           -e "artifacts_dir=$PROJECT_DIR/artifacts" \
           -e "credentials_dir=$PROJECT_DIR/credentials" \
+          -e "etcd_cert_alt_ips=['127.0.0.1','::1','$ACTUAL_IP']" \
           -b \
           "$@"
 
