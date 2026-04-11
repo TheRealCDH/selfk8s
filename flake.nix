@@ -70,7 +70,8 @@ EOF
         fi
         
         # Detect actual IP for Kubespray validation at RUNTIME
-        ACTUAL_IP=$(ip -4 addr show $(ip route get 1.1.1.1 | grep -oP 'dev \K\S+') | grep -oP 'inet \K[\d.]+' | head -n1)
+        # Use a more robust way to get the primary IP
+        ACTUAL_IP=$(hostname -I | awk '{print $1}')
         ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
         echo "Detected IP: $ACTUAL_IP"
 
