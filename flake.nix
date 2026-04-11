@@ -170,13 +170,13 @@ EOF
         echo "Configuring FluxCD to sync with https://github.com/TheRealCDH/fluxrepo..."
         # Create GitSource pointing to the user's repo
         # We rename it to flux-system to match the references in the repo's manifests
-        # We add --ignore to respect the user's .fluxignore patterns at the source level
+        # We add --ignore-paths to respect the user's .fluxignore patterns at the source level
         if ! flux get source git flux-system -n flux-system > /dev/null 2>&1; then
           flux create source git flux-system \
             --url=https://github.com/TheRealCDH/fluxrepo \
             --branch=main \
             --interval=1m \
-            --ignore="**/charts/,**/templates/,**/Chart.yaml,**/values.yaml" \
+            --ignore-paths="**/charts/,**/templates/,**/Chart.yaml,**/values.yaml" \
             --namespace=flux-system
         fi
 
