@@ -84,6 +84,8 @@ all:
       ansible_host: 127.0.0.1
       ip: $ACTUAL_IP
       access_ip: $ACTUAL_IP
+      supplementary_addresses_in_ssl_keys: [ "$ACTUAL_IP" ]
+      etcd_cert_alt_ips: [ "127.0.0.1", "::1", "$ACTUAL_IP" ]
   children:
     kube_control_plane:
       hosts:
