@@ -120,7 +120,8 @@ EOF
   "etcd_cert_alt_ips": ["127.0.0.1", "::1", "$ACTUAL_IP"],
   "supplementary_addresses_in_ssl_keys": ["$ACTUAL_IP"],
   "etcd_address": "$ACTUAL_IP",
-  "etcd_kubeadm_enabled": false
+  "etcd_kubeadm_enabled": false,
+  "ssl_ca_dirs": ["/usr/share/ca-certificates", "/usr/local/share/ca-certificates"]
 }
 EOF
 
