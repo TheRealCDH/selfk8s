@@ -114,9 +114,10 @@ EOF
         sudo chown root:root /opt/cni/bin
         sudo chmod 755 /opt/cni/bin
 
-        # Always update/create hosts.yaml to ensure correct IP
-        # We use 'local' connection but rename the host to node1.
-        cat <<EOF > inventory/local/hosts.yaml
+        # Always update/create hosts.yaml if it doesn't exist or is the default
+        if [ ! -f inventory/local/hosts.yaml ] || grep -q "node1" inventory/local/hosts.yaml; then
+          echo "Generating/Updating single-node inventory for $ACTUAL_IP..."
+          cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
     node1:
@@ -139,6 +140,14 @@ all:
         kube_control_plane:
         kube_node:
 EOF
+        fi
+
+        # Count nodes to determine scaling defaults
+        NODE_COUNT=$(grep -c "ansible_host" inventory/local/hosts.yaml || echo 1)
+        CILIUM_REPLICAS=1
+        if [ "$NODE_COUNT" -gt 1 ]; then
+          CILIUM_REPLICAS=2
+        fi
 
         # Create a definitive vars file
         cat <<EOF > extra_vars.json
@@ -153,7 +162,7 @@ EOF
   "loadbalancer_apiserver_port": 6444,
   "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443",
   "kube_proxy_strict_arp": true,
-  "cilium_operator_replicas": 1
+  "cilium_operator_replicas": $CILIUM_REPLICAS
 }
 EOF
 
@@ -187,10 +196,10 @@ EOF
         sudo cp /etc/kubernetes/admin.conf ~/.kube/config
         sudo chown $(id -u):$(id -g) ~/.kube/config
 
-        echo "Wait for nodes to be Ready..."
+        echo "Wait for all nodes to be Ready..."
         # If Cilium is stuck in Init:Error due to race conditions, restart it
         (sleep 30 && kubectl delete pods -n kube-system -l k8s-app=cilium --field-selector=status.phase!=Running) || true
-        kubectl wait --for=condition=Ready node/node1 --timeout=300s || true
+        kubectl wait --for=condition=Ready nodes --all --timeout=600s || true
 
         echo "Installing FluxCD with Helm support..."
         # Flux install includes helm-controller by default, but we ensure components are ready
