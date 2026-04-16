@@ -152,7 +152,8 @@ EOF
   "kube_apiserver_bind_address": "0.0.0.0",
   "loadbalancer_apiserver_port": 6444,
   "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443",
-  "kube_proxy_strict_arp": true
+  "kube_proxy_strict_arp": true,
+  "cilium_operator_replicas": 1
 }
 EOF
 
@@ -187,10 +188,9 @@ EOF
         sudo chown $(id -u):$(id -g) ~/.kube/config
 
         echo "Wait for nodes to be Ready..."
+        # If Cilium is stuck in Init:Error due to race conditions, restart it
+        (sleep 30 && kubectl delete pods -n kube-system -l k8s-app=cilium --field-selector=status.phase!=Running) || true
         kubectl wait --for=condition=Ready node/node1 --timeout=300s || true
-
-        echo "Fixing Cilium operator replicas for single-node cluster..."
-        kubectl scale deployment -n kube-system cilium-operator --replicas=1 || true
 
         echo "Installing FluxCD with Helm support..."
         # Flux install includes helm-controller by default, but we ensure components are ready
