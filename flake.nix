@@ -77,6 +77,10 @@ EOF
         # Patch the kube Ansible module to default to the correct admin.conf
         # This is more robust than patching every YAML file call
         find $out -name "kube.py" -exec sed -i "s/kubeconfig=dict()/kubeconfig=dict(default='\/etc\/kubernetes\/admin.conf')/g" {} \;
+
+        # Fix CNI directory permissions to prevent Cilium init failures
+        find $out -name "0050-create_directories.yml" -exec sed -i '/name: Create cni directories/,/mode:/ s/mode: "0755"/mode: "0777"/' {} \;
+        find $out -name "0050-create_directories.yml" -exec sed -i '/name: Create cni directories/,/owner:/ s/owner: "{{ kube_owner }}"/owner: root/' {} \;
       '';
 
       # Python environment for Kubespray
