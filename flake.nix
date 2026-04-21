@@ -68,6 +68,12 @@ EOF
         # This prevents the entire nix-first-boot.service from failing at the very end
         find $out -name "main.yml" -exec sed -i '/name: Apply workaround to allow all nodes with cert O=system:nodes to register/a \  ignore_errors: true' {} \;
 
+        # Increase MetalLB and other rollout timeouts from 2m to 10m
+        find $out -name "*.yml" -exec sed -i 's/--timeout=2m/--timeout=10m/g' {} \;
+
+        # Ensure kubectl rollout commands in playbooks use the correct kubeconfig
+        find $out -name "*.yml" -exec sed -i 's/kubectl rollout status/kubectl --kubeconfig={{ kube_config_dir }}\/admin.conf rollout status/g' {} \;
+
         # Patch the kube Ansible module to default to the correct admin.conf
         # This is more robust than patching every YAML file call
         find $out -name "kube.py" -exec sed -i "s/kubeconfig=dict()/kubeconfig=dict(default='\/etc\/kubernetes\/admin.conf')/g" {} \;
