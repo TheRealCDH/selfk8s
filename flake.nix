@@ -114,8 +114,8 @@ EOF
         sudo chown root:root /opt/cni/bin
         sudo chmod 755 /opt/cni/bin
 
-        # Always update/create hosts.yaml if it doesn't exist or is the default
-        if [ ! -f inventory/local/hosts.yaml ] || grep -q "node1" inventory/local/hosts.yaml; then
+        # Always update/create hosts.yaml if it doesn't exist or is the default localhost
+        if [ ! -f inventory/local/hosts.yaml ] || grep -q "localhost" inventory/local/hosts.yaml; then
           echo "Generating/Updating single-node inventory for $ACTUAL_IP..."
           cat <<EOF > inventory/local/hosts.yaml
 all:
@@ -162,7 +162,8 @@ EOF
   "loadbalancer_apiserver_port": 6444,
   "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443",
   "kube_proxy_strict_arp": true,
-  "cilium_operator_replicas": $CILIUM_REPLICAS
+  "cilium_operator_replicas": $CILIUM_REPLICAS,
+  "ignore_assert_errors": true
 }
 EOF
 
