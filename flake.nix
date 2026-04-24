@@ -54,7 +54,7 @@ EOF
         find $out -name "openssl.conf.j2" -exec sh -c "sed -i '/\[alt_names\]/,\$d' {} && cat >> {} <<'EOF'
 [alt_names]
 DNS.1 = localhost
-DNS.2 = node1
+DNS.2 = {{ inventory_hostname }}
 DNS.3 = etcd
 IP.1 = 127.0.0.1
 IP.2 = ::1
@@ -115,8 +115,22 @@ EOF
         find inventory -name "k8s-cluster.yml" -exec sed -i '/cloud_provider: undefined/d' {} \;
         
         # Detect actual IP for Kubespray validation at RUNTIME
+        # We pick the first non-loopback IP
         ACTUAL_IP=$(hostname -I | awk '{print $1}')
         ACTUAL_IP=''${ACTUAL_IP:-127.0.0.1}
+        
+        # Hostname handling
+        SYSTEM_HOSTNAME=$(hostname)
+        if [ "$USE_SYSTEM_HOSTNAME" = "false" ]; then
+          NODE_NAME="node1"
+          OVERRIDE_HOSTNAME="true"
+        else
+          NODE_NAME="$SYSTEM_HOSTNAME"
+          OVERRIDE_HOSTNAME="false"
+        fi
+
+        echo "Deploying to: localhost"
+        echo "Node Name: $NODE_NAME"
         echo "Detected IP: $ACTUAL_IP"
 
         # Pre-fix permissions for CNI binaries (Cilium requirement)
@@ -124,13 +138,12 @@ EOF
         sudo chown root:root /opt/cni/bin
         sudo chmod 755 /opt/cni/bin
 
-        # Always update/create hosts.yaml if it doesn't exist or is the default localhost
-        if [ ! -f inventory/local/hosts.yaml ] || grep -q "localhost" inventory/local/hosts.yaml; then
-          echo "Generating/Updating single-node inventory for $ACTUAL_IP..."
-          cat <<EOF > inventory/local/hosts.yaml
+        # Always update/create hosts.yaml to ensure it matches current state
+        echo "Generating/Updating single-node inventory for $NODE_NAME ($ACTUAL_IP)..."
+        cat <<EOF > inventory/local/hosts.yaml
 all:
   hosts:
-    node1:
+    $NODE_NAME:
       ansible_connection: local
       ansible_host: localhost
       ip: $ACTUAL_IP
@@ -138,26 +151,18 @@ all:
   children:
     kube_control_plane:
       hosts:
-        node1:
+        $NODE_NAME:
     kube_node:
       hosts:
-        node1:
+        $NODE_NAME:
     etcd:
       hosts:
-        node1:
+        $NODE_NAME:
     k8s_cluster:
       children:
         kube_control_plane:
         kube_node:
 EOF
-        fi
-
-        # Count nodes to determine scaling defaults
-        NODE_COUNT=$(grep -c "ansible_host" inventory/local/hosts.yaml || echo 1)
-        CILIUM_REPLICAS=1
-        if [ "$NODE_COUNT" -gt 1 ]; then
-          CILIUM_REPLICAS=2
-        fi
 
         # Create a definitive vars file
         cat <<EOF > extra_vars.json
@@ -172,14 +177,16 @@ EOF
   "loadbalancer_apiserver_port": 6444,
   "kube_apiserver_endpoint": "https://$ACTUAL_IP:6443",
   "kube_proxy_strict_arp": true,
-  "cilium_operator_replicas": $CILIUM_REPLICAS,
-  "ignore_assert_errors": true
+  "cilium_operator_replicas": 1,
+  "ignore_assert_errors": true,
+  "override_system_hostname": $OVERRIDE_HOSTNAME,
+  "kube_proxy_mode": "iptables"
 }
 EOF
 
         KUBESPRAY_DIR="${patchedKubespray}"
         
-        echo "Starting autonomous single-node deployment on node1 ($ACTUAL_IP) with K8s v1.32.1..."
+        echo "Starting autonomous single-node deployment on $NODE_NAME ($ACTUAL_IP) with K8s v1.32.1..."
         
         export ANSIBLE_HOST_KEY_CHECKING=False
         export ANSIBLE_ALLOW_BROKEN_CONDITIONALS=True

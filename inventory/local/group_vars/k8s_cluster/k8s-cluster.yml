@@ -2,7 +2,7 @@
 kube_network_plugin: cilium
 kube_apiserver_bind_address: 0.0.0.0
 kube_apiserver_port: 6443
-kube_proxy_mode: ipvs
+kube_proxy_mode: iptables
 
 # Allow swap if enabled on the host (common on single nodes)
 kubelet_fail_swap_on: false
